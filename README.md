@@ -187,21 +187,5 @@ finally 블록으로 Lock을 해제할 수 있어서 데드락이나 Lock 누수
 실제 DB는 아니기 때문에 JPA나 @Transactional 기반의 DB Lock이 사용 불가했음 
 ReentrantLock은 JVM 메모리 내에서 동작하여 인메모리 환경에 적합했음
 
----
 
-### API 엔드포인트
-- `GET /point/{id}`: 포인트 조회
-- `GET /point/{id}/histories`: 포인트 히스토리 조회
-- `PATCH /point/{id}/charge`: 포인트 충전 (Body: `{"amount": 1000}`)
-- `PATCH /point/{id}/use`: 포인트 사용 (Body: `{"amount": 500}`)
-
----
-
-## 기술 스택
-- Java 17
-- Spring Boot 3.2.0
-- JUnit 5
-- AssertJ
-- Lombok
-- Gradle 8.5
 
