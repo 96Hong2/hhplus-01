@@ -103,7 +103,7 @@ public class PointControllerTest {
         }
 
         @Test
-        @DisplayName("서비스에서 예외 발생 시 500 에러를 반환한다.")
+        @DisplayName("서비스에서 예외 발생 시 적절한 예외를 반환한다.")
         void chargePoint_serviceException() throws Exception {
             // given
             when(pointService.chargePoint(anyLong(), anyLong()))
@@ -113,9 +113,9 @@ public class PointControllerTest {
             mockMvc.perform(patch("/point/{id}/charge", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("10000"))
-                    .andExpect(status().is5xxServerError())
-                    .andExpect(jsonPath("$.code").value("500"))
-                    .andExpect(jsonPath("$.message").value("에러가 발생했습니다."));
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("400"))
+                    .andExpect(jsonPath("$.message").value("충전 중 어떤 예외 발생!"));
         }
     }
 
@@ -141,7 +141,7 @@ public class PointControllerTest {
         }
 
         @Test
-        @DisplayName("서비스에서 예외 발생 시 500 에러를 반환한다.")
+        @DisplayName("서비스에서 예외 발생 시 적절한 예외를 반환한다.")
         void usePoint_serviceException() throws Exception {
             // given
             when(pointService.usePoint(anyLong(), anyLong()))
@@ -151,9 +151,9 @@ public class PointControllerTest {
             mockMvc.perform(patch("/point/{id}/use", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("10000"))
-                    .andExpect(status().is5xxServerError())
-                    .andExpect(jsonPath("$.code").value("500"))
-                    .andExpect(jsonPath("$.message").value("에러가 발생했습니다."));
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("400"))
+                    .andExpect(jsonPath("$.message").value("포인트가 부족합니다."));
         }
     }
 }

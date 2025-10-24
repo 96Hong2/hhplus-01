@@ -5,6 +5,8 @@ import io.hhplus.tdd.database.UserPointTable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,6 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 public class PointIntegrationTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(PointIntegrationTest.class);
 
     @Autowired
     MockMvc mockMvc; // HTTP 요청을 시뮬레이션
@@ -145,7 +149,7 @@ public class PointIntegrationTest {
         mockMvc.perform(patch("/point/{id}/use", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(String.valueOf(useAmount)))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -154,20 +158,20 @@ public class PointIntegrationTest {
         // given
         int threadCount = 10;
         long chargeAmount = 1000L;
-        long expectedTotal = threadCount * chargeAmount;
 
         ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
-        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger atomicCounter = new AtomicInteger(0);
 
         // when - 동시에 10번 충전
-        for (int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < threadCount; i++)
+        {
             executorService.submit(() -> {
                 try {
                     pointService.chargePoint(userId, chargeAmount);
-                    successCount.incrementAndGet();
+                    atomicCounter.incrementAndGet();
                 } catch (Exception e) {
-                    // 예외 발생 시 무시
+                    logger.error("Exception : ", e);
                 } finally {
                     latch.countDown();
                 }
@@ -178,13 +182,16 @@ public class PointIntegrationTest {
         executorService.shutdown();
 
         // then - 최종 잔액 확인
-        UserPoint finalPoint = userPointTable.selectById(userId);
-        assertThat(finalPoint.point()).isEqualTo(expectedTotal);
-        assertThat(successCount.get()).isEqualTo(threadCount);
+        UserPoint userPoint = userPointTable.selectById(userId);
+        assertThat(userPoint.point()).isEqualTo(chargeAmount * threadCount);
+        assertThat(atomicCounter.get()).isEqualTo(threadCount);
 
         // 히스토리도 정확히 10개 기록되어야 함
-        List<PointHistory> histories = pointHistoryTable.selectAllByUserId(userId);
-        assertThat(histories).hasSize(threadCount);
+        List<PointHistory> pointHistoryList = pointHistoryTable.selectAllByUserId(userId);
+        assertThat(pointHistoryList).isNotNull();
+        assertThat(pointHistoryList).hasSize(10);
+        assertThat(pointHistoryList).extracting("type").containsOnly(TransactionType.CHARGE);
+        assertThat(pointHistoryList).extracting("amount").containsOnly(chargeAmount);
     }
 
     @Test
@@ -194,18 +201,18 @@ public class PointIntegrationTest {
         mockMvc.perform(patch("/point/{id}/charge", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("-1000"))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
 
         // when & then - 100원 단위가 아닌 금액
         mockMvc.perform(patch("/point/{id}/charge", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("1550"))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
 
         // when & then - 최대 한도 초과
         mockMvc.perform(patch("/point/{id}/charge", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("2000000"))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
     }
 }
