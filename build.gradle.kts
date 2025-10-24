@@ -27,6 +27,7 @@ dependencies {
     annotationProcessor(libs.lombok)
     annotationProcessor(libs.spring.boot.configuration.processor)
     testImplementation(libs.spring.boot.starter.test)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 // about source and compilation
@@ -49,4 +50,7 @@ tasks.getByName("jar") {
 tasks.test {
     ignoreFailures = true
     useJUnitPlatform()
+
+    // 테스트를 Gradle 데몬 프로세스 내에서 직접 실행 (워커 프로세스 사용 안함)
+    maxParallelForks = 1
 }
